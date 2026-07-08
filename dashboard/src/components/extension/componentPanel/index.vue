@@ -12,7 +12,7 @@
  * - components/RenameDialog.vue: 重命名对话框
  * - components/DetailsDialog.vue: 详情对话框
  */
-import { onActivated, onMounted, ref, watch} from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useModuleI18n } from '@/i18n/composables';
 
 // Composables
@@ -314,7 +314,7 @@ watch(viewMode, async (mode) => {
   />
 
   <!-- Snackbar -->
-  <v-snackbar :timeout="2000" elevation="24" :color="snackbar.color" v-model="snackbar.show">
+  <v-snackbar :timeout="2000" elevation="6" :color="snackbar.color" v-model="snackbar.show">
     {{ snackbar.message }}
   </v-snackbar>
 </template>

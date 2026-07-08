@@ -5,7 +5,6 @@ import time
 import traceback
 import typing as T
 import uuid
-from collections.abc import AsyncIterator
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -146,6 +145,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
     REPEATED_TOOL_NOTICE_L1_THRESHOLD = 3
     REPEATED_TOOL_NOTICE_L2_THRESHOLD = 4
     REPEATED_TOOL_NOTICE_L3_THRESHOLD = 5
+    MALFORMED_TOOL_NAME_PLACEHOLDER = "__malformed_tool_name__"
     REPEATED_TOOL_NOTICE_L1_TEMPLATE = (
         "\n\n[SYSTEM NOTICE] By the way, you have executed the same tool "
         "`{tool_name}` {streak} times consecutively. Double-check whether another "
@@ -225,6 +225,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         custom_compressor: ContextCompressor | None = None,
         tool_schema_mode: str | None = "full",
         fallback_providers: list[Provider] | None = None,
+        request_max_retries: int | None = None,
         tool_result_overflow_dir: str | None = None,
         read_tool: FunctionTool | None = None,
         **kwargs: T.Any,
@@ -238,6 +239,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
         self.truncate_turns = truncate_turns
         self.custom_token_counter = custom_token_counter
         self.custom_compressor = custom_compressor
+        self.request_max_retries = request_max_retries
         self.tool_result_overflow_dir = tool_result_overflow_dir
         self.read_tool = read_tool
         self._tool_result_token_counter = EstimateTokenCounter()
@@ -464,6 +466,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             "session_id": self.req.session_id,
             "extra_user_content_parts": self.req.extra_user_content_parts,  # list[ContentPart]
             "abort_signal": self._abort_signal,
+            "request_max_retries": self.request_max_retries,
         }
         if include_model:
             # For primary provider we keep explicit model selection if provided.
@@ -530,6 +533,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                                     )
                                     break
 
+                                self._sanitize_malformed_tool_calls(resp)
                                 yield resp
                                 return
 
@@ -686,6 +690,22 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
             tool_name=tool_name,
             streak=streak,
         )
+
+    def _sanitize_malformed_tool_calls(
+        self,
+        llm_resp: LLMResponse,
+    ) -> None:
+        """Normalize malformed tool call names.
+
+        Args:
+            llm_resp: The LLM response whose tool call lists should be sanitized.
+        """
+        llm_resp.tools_call_name = [
+            self.MALFORMED_TOOL_NAME_PLACEHOLDER
+            if tool_name is None or tool_name.strip() == ""
+            else tool_name
+            for tool_name in llm_resp.tools_call_name
+        ]
 
     @override
     async def step(self):
@@ -1306,9 +1326,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                     extra_user_content_parts=self.req.extra_user_content_parts,
                     # tool_choice="required",
                     abort_signal=self._abort_signal,
+                    request_max_retries=self.request_max_retries,
                 )
                 if requery_resp:
                     llm_resp = requery_resp
+                    self._sanitize_malformed_tool_calls(llm_resp)
 
                 # If the re-query still returns no tool calls, and also does not have a meaningful assistant reply,
                 # we consider it as a failure of the LLM to follow the tool-use instruction,
@@ -1332,9 +1354,11 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
                         extra_user_content_parts=self.req.extra_user_content_parts,
                         # tool_choice="required",
                         abort_signal=self._abort_signal,
+                        request_max_retries=self.request_max_retries,
                     )
                     if repair_resp:
                         llm_resp = repair_resp
+                        self._sanitize_malformed_tool_calls(llm_resp)
 
         return llm_resp, subset
 
@@ -1404,7 +1428,7 @@ class ToolLoopAgentRunner(BaseAgentRunner[TContext]):
 
     async def _iter_tool_executor_results(
         self,
-        executor: AsyncIterator[ToolExecutorResultT],
+        executor: T.AsyncGenerator[ToolExecutorResultT, None],
     ) -> T.AsyncGenerator[ToolExecutorResultT, None]:
         async def _next_executor_result() -> ToolExecutorResultT:
             return await anext(executor)

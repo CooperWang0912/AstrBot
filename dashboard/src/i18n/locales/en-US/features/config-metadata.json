@@ -45,6 +45,10 @@
           "description": "Fallback chat model IDs",
           "hint": "When the primary chat model request fails, fallback to these chat models in order."
         },
+        "request_max_retries": {
+          "description": "Request Max Retries",
+          "hint": "Maximum attempts for a single model request when retryable errors occur."
+        },
         "default_image_caption_provider_id": {
           "description": "Default Image Caption Model",
           "hint": "Leave empty to disable; useful for non-multimodal models"
@@ -135,6 +139,10 @@
         },
         "web_search_link": {
           "description": "Display Source Citations"
+        },
+        "websearch_exa_key": {
+          "description": "Exa API Key",
+          "hint": "Multiple keys can be added for rotation. Get a key at https://dashboard.exa.ai"
         }
       }
     },
@@ -613,7 +621,7 @@
       },
       "unified_webhook_mode": {
         "description": "Unified Webhook Mode",
-        "hint": "When enabled, use AstrBot unified webhook entry without opening a separate port. Callback URL is /api/platform/webhook/{webhook_uuid}."
+        "hint": "When enabled, use AstrBot unified webhook entry without opening a separate port. Callback URL is /api/v1/webhooks/platforms/{webhook_uuid}."
       },
       "webhook_uuid": {
         "description": "Webhook UUID",
@@ -1229,22 +1237,22 @@
         "hint": "Only effective for qwen3-rerank models. Recommended to write in English."
       },
       "nvidia_rerank_api_base": {
-          "description": "API Base URL"
+        "description": "API Base URL"
       },
       "nvidia_rerank_api_key": {
-          "description": "API Key"
+        "description": "API Key"
       },
       "nvidia_rerank_model": {
-          "description": "Rerank Model Name",
-          "hint": "Please refer to the NVIDIA Docs for the model name."
+        "description": "Rerank Model Name",
+        "hint": "Please refer to the NVIDIA Docs for the model name."
       },
       "nvidia_rerank_model_endpoint": {
-          "description": "Custom Model Endpoint",
-          "hint": "Custom URL suffix endpoint, defaults to /reranking."
+        "description": "Custom Model Endpoint",
+        "hint": "Custom URL suffix endpoint, defaults to /reranking."
       },
       "nvidia_rerank_truncate": {
-          "description": "Text Truncation Strategy",
-          "hint": "Whether to truncate the input to fit the model's maximum context length when the input text is too long."
+        "description": "Text Truncation Strategy",
+        "hint": "Whether to truncate the input to fit the model's maximum context length when the input text is too long."
       },
       "launch_model_if_not_running": {
         "description": "Auto-start model if not running",
@@ -1392,7 +1400,7 @@
         "description": "API Base URL"
       },
       "openai_embedding": {
-        "hint": "If testing fails, try adding /v1 at the end to be compatible with some OpenAI API versions."
+        "hint": "If testing fails, try adding /v1 at the end for some OpenAI API versions."
       },
       "gemini_embedding": {
         "hint": "Gemini Embedding does not require manually adding /v1beta."
@@ -1589,14 +1597,6 @@
       "timeout": {
         "description": "Timeout",
         "hint": "Timeout in seconds."
-      },
-      "mimo-stt-system-prompt": {
-        "description": "System prompt",
-        "hint": "System prompt used to guide MiMo STT transcription behavior."
-      },
-      "mimo-stt-user-prompt": {
-        "description": "User prompt",
-        "hint": "Additional user prompt sent to MiMo STT to constrain the returned transcription format."
       },
       "openai-tts-voice": {
         "description": "voice",
